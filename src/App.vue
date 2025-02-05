@@ -53,9 +53,8 @@
 import { ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { UploadFilled, Download } from '@element-plus/icons-vue';
-import type { UploadFile } from 'element-plus';
 
-interface FileItem extends UploadFile {
+interface FileItem extends File {
   url?: string;
   customStatus?: 'pending' | 'done' | 'error';
 }
@@ -75,14 +74,16 @@ const convertImages = async () => {
   isConverting.value = true;
   try {
     const convertedFiles = await Promise.all(
-      fileList.value.map(async (file) => {
+      fileList.value.map(async (file: File) => {
         try {
-          const formData = new FormData();
-          formData.append('image', file.raw!);
+          const buffer = await file.arrayBuffer();
 
           const response = await fetch('/api/convert', {
             method: 'POST',
-            body: formData,
+            body: buffer,
+            headers: {
+              'Content-Type': file.type,
+            },
           });
 
           if (!response.ok) throw new Error('转换失败');

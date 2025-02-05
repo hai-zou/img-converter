@@ -19,6 +19,19 @@ export default async function handler(req, res) {
       req.on('error', reject);
     });
 
+    // 验证文件是否为图片
+    let metadata;
+    try {
+      metadata = await sharp(data).metadata();
+      if (!metadata.format) {
+        return res.status(400).json({ error: '文件不是有效的图片格式' });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(400).json({ error: '文件不是有效的图片' });
+    }
+
+    // 转换为 WebP
     const converted = await sharp(data)
       .webp({ quality: 80 })
       .toBuffer();
