@@ -70,17 +70,26 @@ const handleFileChange = (file: FileItem) => {
   file.customStatus = 'pending';
 };
 
+const fileToBuffer = (file: File) => {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.readAsArrayBuffer(file);
+		reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+		reader.onerror = reject;
+	});
+}
+
 const convertImages = async () => {
   isConverting.value = true;
   try {
     const convertedFiles = await Promise.all(
       fileList.value.map(async (file: File) => {
         try {
-          const buffer = await file.arrayBuffer();
+          const buffer = await fileToBuffer(file);
 
           const response = await fetch('/api/convert', {
             method: 'POST',
-            body: buffer,
+            body: buffer as unknown as BodyInit,
             headers: {
               'Content-Type': file.type,
             },
@@ -94,7 +103,8 @@ const convertImages = async () => {
             customStatus: 'done',
             url: URL.createObjectURL(blob),
           };
-        } catch {
+        } catch (error) {
+          console.error(error);
           return { ...file, customStatus: 'error' };
         }
       })
