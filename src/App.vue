@@ -1,0 +1,139 @@
+<template>
+  <div class="container">
+    <el-upload
+      v-model:file-list="fileList"
+      :show-file-list="false"
+      action=""
+      multiple
+      :auto-upload="false"
+      :on-change="handleFileChange"
+      drag
+    >
+      <el-icon :size="50"><upload-filled /></el-icon>
+      <div class="el-upload__text">
+        将文件拖到此处，或<em>点击上传</em>
+      </div>
+      <template #tip>
+        <div class="el-upload__tip">
+          图片大小不能超过4MB
+        </div>
+      </template>
+    </el-upload>
+
+    <div class="file-action">
+      <el-button
+        type="primary"
+        :disabled="!fileList.length || isConverting"
+        @click="convertImages"
+      >
+        {{ isConverting ? '转换中...' : '开始转换' }}
+      </el-button>
+    </div>
+
+    <div class="file-list">
+      <div v-for="(file, index) in fileList" :key="index" class="file-item">
+        <span>{{ file.name }}</span>
+        <el-button
+          v-if="file.status === 'done'"
+          type="success"
+          :icon="Download"
+          @click="downloadFile(file.url, file.name)"
+        >
+          下载 WebP
+        </el-button>
+        <el-tag v-else-if="file.status === 'error'" type="danger">
+          转换失败
+        </el-tag>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { UploadFilled, Download } from '@element-plus/icons-vue';
+import type { UploadFile } from 'element-plus';
+
+interface FileItem extends UploadFile {
+  url?: string;
+  status?: 'pending' | 'done' | 'error';
+}
+
+const fileList = ref<FileItem[]>([]);
+const isConverting = ref(false);
+
+const handleFileChange = (file: FileItem) => {
+  if (file.size > 4 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过4MB');
+    return false;
+  }
+  file.status = 'pending';
+};
+
+const convertImages = async () => {
+  isConverting.value = true;
+  try {
+    const convertedFiles = await Promise.all(
+      fileList.value.map(async (file) => {
+        try {
+          const formData = new FormData();
+          formData.append('image', file.raw!);
+
+          const response = await fetch('/api/convert', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) throw new Error('转换失败');
+
+          const blob = await response.blob();
+          return {
+            ...file,
+            status: 'done',
+            url: URL.createObjectURL(blob),
+          };
+        } catch (error) {
+          return { ...file, status: 'error' };
+        }
+      })
+    );
+
+    fileList.value = convertedFiles;
+  } finally {
+    isConverting.value = false;
+  }
+};
+
+const downloadFile = (url: string, name: string) => {
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `converted-${name}.webp`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+</script>
+
+<style scoped>
+.container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+.file-action {
+  margin-top: 1rem;
+}
+
+.file-list {
+  margin-top: 1rem;
+}
+
+.file-item {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+</style>
