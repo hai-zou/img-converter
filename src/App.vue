@@ -34,14 +34,14 @@
       <div v-for="(file, index) in fileList" :key="index" class="file-item">
         <span>{{ file.name }}</span>
         <el-button
-          v-if="file.status === 'done'"
+          v-if="file.customStatus === 'done'"
           type="success"
           :icon="Download"
           @click="downloadFile(file.url, file.name)"
         >
           下载 WebP
         </el-button>
-        <el-tag v-else-if="file.status === 'error'" type="danger">
+        <el-tag v-else-if="file.customStatus === 'error'" type="danger">
           转换失败
         </el-tag>
       </div>
@@ -51,23 +51,24 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { ElMessage } from 'element-plus';
 import { UploadFilled, Download } from '@element-plus/icons-vue';
 import type { UploadFile } from 'element-plus';
 
 interface FileItem extends UploadFile {
   url?: string;
-  status?: 'pending' | 'done' | 'error';
+  customStatus?: 'pending' | 'done' | 'error';
 }
 
 const fileList = ref<FileItem[]>([]);
 const isConverting = ref(false);
 
 const handleFileChange = (file: FileItem) => {
-  if (file.size > 4 * 1024 * 1024) {
+  if ((file?.size || 0) > 4 * 1024 * 1024) {
     ElMessage.error('文件大小不能超过4MB');
     return false;
   }
-  file.status = 'pending';
+  file.customStatus = 'pending';
 };
 
 const convertImages = async () => {
@@ -89,24 +90,24 @@ const convertImages = async () => {
           const blob = await response.blob();
           return {
             ...file,
-            status: 'done',
+            customStatus: 'done',
             url: URL.createObjectURL(blob),
           };
-        } catch (error) {
-          return { ...file, status: 'error' };
+        } catch {
+          return { ...file, customStatus: 'error' };
         }
       })
     );
 
-    fileList.value = convertedFiles;
+    fileList.value = convertedFiles as FileItem[];
   } finally {
     isConverting.value = false;
   }
 };
 
-const downloadFile = (url: string, name: string) => {
+const downloadFile = (url?: string, name?: string) => {
   const link = document.createElement('a');
-  link.href = url;
+  link.href = url || '';
   link.download = `converted-${name}.webp`;
   document.body.appendChild(link);
   link.click();
