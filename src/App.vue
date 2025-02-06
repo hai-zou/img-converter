@@ -57,6 +57,7 @@ import { UploadFilled, Download } from '@element-plus/icons-vue';
 interface FileItem extends File {
   url?: string;
   customStatus?: 'pending' | 'done' | 'error';
+  raw?: File;
 }
 
 const fileList = ref<FileItem[]>([]);
@@ -74,10 +75,10 @@ const convertImages = async () => {
   isConverting.value = true;
   try {
     const convertedFiles = await Promise.all(
-      fileList.value.map(async (file) => {
+      fileList.value.map(async (file: FileItem) => {
         try {
           const formData = new FormData();
-          formData.append('file', file);
+          formData.append('file', file.raw!);
 
           const response = await fetch('/api/convert', {
             method: 'POST',
@@ -92,7 +93,8 @@ const convertImages = async () => {
             customStatus: 'done',
             url: URL.createObjectURL(blob),
           };
-        } catch {
+        } catch (error) {
+          console.error(error);
           return { ...file, customStatus: 'error' };
         }
       })
