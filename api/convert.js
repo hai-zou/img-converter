@@ -4,7 +4,6 @@ import path from "path";
 import sharp from "sharp";
 
 export const config = {
-	runtime: "edge",
 	// 允许 Vercel 解析 multipart/form-data
 	api: {
 		bodyParser: false,
