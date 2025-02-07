@@ -90,6 +90,7 @@ const convertImages = async () => {
           const blob = await response.blob();
           return {
             ...file,
+            name: file.name.split('.')[0],
             customStatus: 'done',
             url: URL.createObjectURL(blob),
           };
@@ -109,7 +110,7 @@ const convertImages = async () => {
 const downloadFile = (url?: string, name?: string) => {
   const link = document.createElement('a');
   link.href = url || '';
-  link.download = `converted-${name}.webp`;
+  link.download = `${name}.webp`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
